@@ -1,0 +1,11 @@
+BU KLASÖRE GÖRSELLERİNİZİ EKLEYEBİLİRSİNİZ:
+
+1. Görsel (Dünya Görseli):
+   Dosya adı: scene1.jpg (veya scene1.png)
+   Kullanım: src/config/heroImagesConfig.ts dosyasında `imageUrl: '/images/scene1.jpg'` yapın.
+
+2. Görsel (Türkiye Haritası Görseli):
+   Dosya adı: scene2.jpg (veya scene2.png)
+   Kullanım: src/config/heroImagesConfig.ts dosyasında `imageUrl: '/images/scene2.jpg'` yapın.
+
+İpucu: Sitedeki "Görselleri Yükle / Ayarla" butonunu kullanarak dosyalarınızı kod yazmadan doğrudan tarayıcıdan da seçebilirsiniz!

@@ -1,0 +1,10 @@
+BU KLASÖRE BAŞLANGIÇ VİDEONUZU KOYABİLİRSİNİZ:
+
+Örnek dosya adı: earth-zoom.mp4
+Klasör yolu: public/videos/earth-zoom.mp4
+
+Nasıl Çalışır?
+1. Videonuzu buraya koyduktan sonra src/config/heroImagesConfig.ts içinde `videoUrl: '/videos/earth-zoom.mp4'` yazabilir
+   veya web sayfasındaki "Görsel & Video Ayarları" butonuna basarak doğrudan dosyanızı seçebilirsiniz.
+2. Aşağı kaydırdıkça video otomatik olarak ilerler; Dünya dönüp Türkiye'ye doğru yaklaşır ve bulutların arasından süzülür.
+3. Video tamamlandığında 2. görseldeki Türkiye kabartma haritası sinematik bir yakınlaşmayla ekrana gelir!

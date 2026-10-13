@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-handwriting {
+    font-family: 'Caveat', cursive, sans-serif;
+  }
+  .font-serif-display {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+  .font-sans-main {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom glow and atmosphere utilities */
+.text-shadow-glow {
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.6), 0 0 40px rgba(56, 189, 248, 0.3);
+}
+
+.text-shadow-sun {
+  text-shadow: 0 0 25px rgba(254, 240, 138, 0.8), 0 0 50px rgba(251, 191, 36, 0.4);
+}
+
+@keyframes float-balloon {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1.5deg);
+  }
+}
+
+@keyframes drift-clouds {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.animate-float-balloon {
+  animation: float-balloon 5s ease-in-out infinite;
+}
+
+.animate-float-balloon-delayed {
+  animation: float-balloon 6.5s ease-in-out 1.5s infinite;
+}
+
+.animate-drift {
+  animation: drift-clouds 90s linear infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+

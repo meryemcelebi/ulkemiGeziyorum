@@ -1,0 +1,6 @@
+{
+  "name": "Ülkemi Geziyorum",
+  "description": "Dünyadan Türkiye'ye uzanan interaktif 3D keşif deneyimi. 81 il, binlerce tarihi ve doğal rota seni bekliyor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

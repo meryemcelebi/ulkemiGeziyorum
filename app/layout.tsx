@@ -1,20 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Ülkemi Geziyorum | Açık Veri Kültür ve Mekan Rehberi",
-  description: "Türkiye belediye açık veri portallarından derlenen tarihi yerler, müzeler ve kültür merkezleri rehberi.",
+  title: "Ülkemi Geziyorum | Türkiye Keşif Platformu",
+  description: "Türkiye belediye açık veri portallarından derlenen tarihi yapılar, müzeler, 81 il rehberi ve rotalar.",
 };
 
 export default function RootLayout({
@@ -23,11 +12,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="tr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans">
+    <html lang="tr" className="scroll-smooth">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-screen bg-white text-slate-900 font-sans-main antialiased selection:bg-blue-600 selection:text-white overflow-x-hidden">
         {children}
       </body>
     </html>

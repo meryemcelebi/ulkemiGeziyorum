@@ -1,5 +1,5 @@
 export interface Place {
-  id: string;
+  id?: string;
   name: string;
   category: string;
   city: string;
@@ -17,4 +17,12 @@ export interface FilterOptions {
   district?: string;
   category?: string;
   searchQuery?: string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  count: number;
+  message?: string;
+  error?: string;
+  data?: Place[];
 }

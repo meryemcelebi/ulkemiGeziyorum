@@ -37,6 +37,9 @@ Proje, harita karmaşasından uzak; hızlı, sade ve liste/kart görünümü oda
 ```text
 ulkemiGeziyorum/
 ├── app/
+│   ├── api/
+│   │   └── sync/
+│   │       └── route.ts       # Veri eşitleme API rotası (GET /api/sync)
 │   ├── favicon.ico
 │   ├── globals.css            # Tailwind CSS direktifleri ve temel tema
 │   ├── layout.tsx             # Kök layout, Türkçe meta etiketleri ve fontlar
@@ -110,7 +113,24 @@ npm run dev
 
 Tarayıcınızda [http://localhost:3000](http://localhost:3000) adresine giderek uygulamayı görüntüleyebilirsiniz.
 
-### 4. Üretim Derlemesi (Build)
+### 4. Açık Veri Senkronizasyonu (Sync)
+
+İzmir Açık Veri Portalı'ndaki müzeleri Supabase `places` tablosuna çekip eşitlemek için:
+
+Tarayıcınızda veya cURL ile şu adrese istek atabilirsiniz:
+```bash
+curl http://localhost:3000/api/sync
+```
+veya tarayıcıdan `http://localhost:3000/api/sync` adresine gidebilirsiniz. Başarılı işlem sonucunda:
+```json
+{
+  "success": true,
+  "message": "26 adet İzmir müze kaydı Supabase 'places' tablosuna başarıyla eşitlendi.",
+  "count": 26
+}
+```
+
+### 5. Üretim Derlemesi (Build)
 
 ```bash
 npm run build

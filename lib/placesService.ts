@@ -1,5 +1,5 @@
 import { Place, FilterOptions } from '@/types';
-import { supabase, isSupabaseConfigured } from './supabase';
+import { getSupabase, isSupabaseConfigured } from './supabase';
 import { mockPlaces } from './data/mockPlaces';
 
 /**
@@ -7,8 +7,9 @@ import { mockPlaces } from './data/mockPlaces';
  * Salt okunur mimari: Frontend doğrudan dış portallara gitmez, Supabase'den okur.
  */
 export async function getPlaces(filters?: FilterOptions): Promise<Place[]> {
-  if (isSupabaseConfigured) {
+  if (isSupabaseConfigured()) {
     try {
+      const supabase = getSupabase();
       let query = supabase.from('places').select('*');
 
       if (filters?.district && filters.district !== 'all') {

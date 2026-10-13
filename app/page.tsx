@@ -1,47 +1,156 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { Navbar } from '@/components/Navbar';
+import { ModernHero } from '@/components/ModernHero';
+import { PopularRoutesSection } from '@/components/PopularRoutesSection';
+import { CityDetailModal } from '@/components/CityDetailModal';
+import { ExploreProvincesModal } from '@/components/ExploreProvincesModal';
+import { RoutePlannerModal } from '@/components/RoutePlannerModal';
+import { LandmarkSpot, REGIONS_DATA } from '@/data/regionsData';
+
 import { PlaceCard } from '@/components/PlaceCard';
+import { getPlaces } from '@/lib/placesService';
 import { mockPlaces } from '@/lib/data/mockPlaces';
-import { Compass, Filter, Search, RotateCcw, MapPin, Building, Info } from 'lucide-react';
+import { Place } from '@/types';
+import { Filter, Search, RotateCcw, MapPin, Building, Info, Compass } from 'lucide-react';
 
 export default function HomePage() {
+  const [selectedSpot, setSelectedSpot] = useState<LandmarkSpot | null>(null);
+  const [isExploreModalOpen, setIsExploreModalOpen] = useState<boolean>(false);
+  const [isPlannerModalOpen, setIsPlannerModalOpen] = useState<boolean>(false);
+  const [savedSpots, setSavedSpots] = useState<string[]>(['istanbul', 'kapadokya']);
+
+  // İzmir Open Data places state
+  const [places, setPlaces] = useState<Place[]>(mockPlaces);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Veriden benzersiz ilçe ve kategorileri otomatik çıkar
-  const districts = useMemo(() => {
-    const list = Array.from(new Set(mockPlaces.map((p) => p.district))).sort();
-    return ['all', ...list];
+  // Hydration-safe localStorage sync
+  useEffect(() => {
+    try {
+      const storedSaved = localStorage.getItem('ulkemi_geziyorum_saved');
+      if (storedSaved) setSavedSpots(JSON.parse(storedSaved));
+    } catch {}
   }, []);
+
+  const handleToggleSaveSpot = (spotId: string) => {
+    const lowerId = spotId.toLowerCase();
+    setSavedSpots((prev) => {
+      const next = prev.includes(lowerId)
+        ? prev.filter((id) => id !== lowerId)
+        : [...prev, lowerId];
+      try {
+        localStorage.setItem('ulkemi_geziyorum_saved', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleRemoveSpot = (spotId: string) => {
+    const lowerId = spotId.toLowerCase();
+    setSavedSpots((prev) => {
+      const next = prev.filter((id) => id !== lowerId);
+      try {
+        localStorage.setItem('ulkemi_geziyorum_saved', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleClearAllSpots = () => {
+    setSavedSpots([]);
+    try {
+      localStorage.setItem('ulkemi_geziyorum_saved', JSON.stringify([]));
+    } catch {}
+  };
+
+  const handleSelectCityByName = (cityName: string) => {
+    const lower = cityName.toLowerCase();
+    const matched = REGIONS_DATA.find(
+      (r) =>
+        r.id.toLowerCase() === lower ||
+        r.name.toLowerCase() === lower ||
+        r.badgeText.toLowerCase() === lower
+    );
+
+    if (matched) {
+      setSelectedSpot(matched);
+    } else {
+      setSelectedSpot({
+        id: lower,
+        name: cityName,
+        region: 'Türkiye',
+        category: 'Kültür',
+        xPercent: 50,
+        yPercent: 50,
+        title: `${cityName} Keşif Rehberi`,
+        tagline: `${cityName} ve çevresindeki tarihi ve doğal güzellikler`,
+        description: `${cityName}, Anadolu'nun zengin kültürel mozaiğinde kendine has tarihi dokusu, eşsiz lezzetleri ve misafirperver halkıyla ziyaretçilerini bekliyor.`,
+        highlights: [
+          `${cityName} Tarihi Kent Merkezi`,
+          `${cityName} Yöresel Çarşıları`,
+          'Doğa Yürüyüş Rotaları',
+          'Yerel Kültür ve Müzeler',
+        ],
+        bestSeason: 'İlkbahar ve Sonbahar Ayları',
+        foodHighlight: `${cityName} Meşhur Yöresel Mutfağı`,
+        badgeText: cityName,
+        color: '#2563eb',
+      });
+    }
+  };
+
+  // Load municipal places
+  useEffect(() => {
+    async function loadPlaces() {
+      try {
+        const data = await getPlaces();
+        if (data && data.length > 0) {
+          setPlaces(data);
+        }
+      } catch (err) {
+        console.warn('Veri yüklenemedi:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadPlaces();
+  }, []);
+
+  // Filter districts and categories
+  const districts = useMemo(() => {
+    const list = Array.from(new Set(places.map((p) => p.district))).filter(Boolean).sort();
+    return ['all', ...list];
+  }, [places]);
 
   const categories = useMemo(() => {
-    const list = Array.from(new Set(mockPlaces.map((p) => p.category))).sort();
+    const list = Array.from(new Set(places.map((p) => p.category))).filter(Boolean).sort();
     return ['all', ...list];
-  }, []);
+  }, [places]);
 
-  // Filtreleme mantığı
   const filteredPlaces = useMemo(() => {
-    return mockPlaces.filter((place) => {
+    return places.filter((place) => {
       const matchDistrict =
         selectedDistrict === 'all' ||
-        place.district.toLowerCase() === selectedDistrict.toLowerCase();
+        place.district?.toLowerCase() === selectedDistrict.toLowerCase();
 
       const matchCategory =
         selectedCategory === 'all' ||
-        place.category.toLowerCase() === selectedCategory.toLowerCase();
+        place.category?.toLowerCase() === selectedCategory.toLowerCase();
 
       const matchSearch =
         !searchQuery.trim() ||
         place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         place.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        place.district.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        place.district?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         place.address_detail?.toLowerCase().includes(searchQuery.toLowerCase());
 
       return matchDistrict && matchCategory && matchSearch;
     });
-  }, [selectedDistrict, selectedCategory, searchQuery]);
+  }, [places, selectedDistrict, selectedCategory, searchQuery]);
 
   const hasActiveFilters =
     selectedDistrict !== 'all' || selectedCategory !== 'all' || searchQuery.trim() !== '';
@@ -52,210 +161,250 @@ export default function HomePage() {
     setSearchQuery('');
   };
 
+  const handleScrollToPlaces = () => {
+    const el = document.getElementById('places-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
-      {/* Üst Navigasyon / Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/80">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-600 text-white shadow-md shadow-sky-500/20">
-                <Compass className="h-6 w-6" />
+    <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans-main antialiased selection:bg-blue-600 selection:text-white">
+      {/* Top Floating Navigation (Terra Style from Image 2) */}
+      <Navbar
+        onOpenPlanner={() => setIsPlannerModalOpen(true)}
+        onOpenAllProvinces={() => setIsExploreModalOpen(true)}
+        savedSpotsCount={savedSpots.length}
+        onExploreClick={handleScrollToPlaces}
+      />
+
+      {/* Main Modern Hero Section (Matches Image 2 Text & Video Showcase Stage) */}
+      <main className="flex-1">
+        <ModernHero
+          onExploreClick={handleScrollToPlaces}
+          onOpenAllProvinces={() => setIsExploreModalOpen(true)}
+        />
+
+        {/* Discovery & Popular Routes Section */}
+        <PopularRoutesSection
+          onSelectSpot={(spot) => setSelectedSpot(spot)}
+          onOpenAllProvinces={() => setIsExploreModalOpen(true)}
+          onOpenPlanner={() => setIsPlannerModalOpen(true)}
+          savedSpots={savedSpots}
+          onToggleSaveSpot={handleToggleSaveSpot}
+        />
+
+        {/* Pilot City: İzmir Open Data Places Explorer */}
+        <section
+          id="places-section"
+          className="relative bg-slate-50/50 pt-20 pb-16 px-4 sm:px-6 lg:px-8 border-t border-slate-100"
+        >
+          <div className="mx-auto max-w-4xl text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-1 text-xs font-semibold text-blue-700 shadow-xs mb-4">
+              <Info className="h-3.5 w-3.5" />
+              Pilot Şehir: İzmir — Belediye Açık Veri Portalı Rehberi
+            </div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+              İzmir&apos;in Tarihini ve Kültürünü <br className="hidden sm:inline" />
+              <span className="text-blue-600">
+                Açık Veriyle Keşfedin
+              </span>
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg">
+              Belediye açık veri portallarından derlenen müzeler, antik kentler, tarihi kalıntılar
+              ve kültür merkezlerini ilçe ve kategoriye göre kolayca filtreleyin.
+            </p>
+          </div>
+
+          {/* Search & Filter Toolbar */}
+          <div className="mx-auto mt-10 max-w-5xl rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-sm">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+              {/* Text Search */}
+              <div className="relative md:col-span-5">
+                <label htmlFor="search" className="sr-only">Mekan Ara</label>
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  <Search className="h-4 w-4" />
+                </div>
+                <input
+                  id="search"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Mekan adı, açıklama veya adres ara..."
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
               </div>
-              <div>
-                <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                  Ülkemi Geziyorum
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Belediye Açık Veri Portalı Rehberi
+
+              {/* District Filter */}
+              <div className="relative md:col-span-3">
+                <label htmlFor="district-select" className="sr-only">İlçe Seçin</label>
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <select
+                  id="district-select"
+                  value={selectedDistrict}
+                  onChange={(e) => setSelectedDistrict(e.target.value)}
+                  className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/60 py-2.5 pl-10 pr-8 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="all">Tüm İlçeler</option>
+                  {districts
+                    .filter((d) => d !== 'all')
+                    .map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Category Filter */}
+              <div className="relative md:col-span-3">
+                <label htmlFor="category-select" className="sr-only">Kategori Seçin</label>
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                  <Building className="h-4 w-4" />
+                </div>
+                <select
+                  id="category-select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/60 py-2.5 pl-10 pr-8 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="all">Tüm Kategoriler</option>
+                  {categories
+                    .filter((c) => c !== 'all')
+                    .map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Reset Filter Button */}
+              <div className="md:col-span-1 flex items-center">
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  disabled={!hasActiveFilters}
+                  title="Filtreleri Temizle"
+                  className={`flex h-10 w-full items-center justify-center rounded-xl border text-sm font-medium transition-all ${
+                    hasActiveFilters
+                      ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-red-600'
+                      : 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Stats */}
+            <div className="mt-4 flex flex-wrap items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-500">
+              <div className="flex items-center gap-2">
+                <Filter className="h-3.5 w-3.5 text-slate-400" />
+                <span>
+                  Bulunan mekan sayısı:{' '}
+                  <strong className="text-slate-900 font-semibold">
+                    {filteredPlaces.length}
+                  </strong>
+                  {hasActiveFilters && (
+                    <span className="ml-1 text-slate-400">
+                      (Toplam {places.length} mekandan filtrelendi)
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={handleResetFilters}
+                  className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  Tüm filtreleri kaldır
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Place Cards Grid */}
+          <div className="mx-auto max-w-7xl px-0 pt-10 sm:px-6 lg:px-8 w-full">
+            {filteredPlaces.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+                {filteredPlaces.map((place) => (
+                  <PlaceCard key={place.id || place.source_id} place={place} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 py-16 px-4 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                  <Search className="h-7 w-7" />
+                </div>
+                <h3 className="mt-4 text-base font-semibold text-slate-900">
+                  Eşleşen mekan bulunamadı
+                </h3>
+                <p className="mt-2 text-sm text-slate-500 max-w-md">
+                  Arama kriterlerinize veya seçilen filtrelere uygun mekan kaydı bulunmuyor. Farklı bir ilçe ya da kategori deneyebilirsiniz.
                 </p>
+                <button
+                  onClick={handleResetFilters}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Filtreleri Sıfırla
+                </button>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-700/10 dark:bg-sky-950/60 dark:text-sky-300 dark:ring-sky-700/30">
-                Pilot Şehir: İzmir
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Alanı */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-sky-50/60 via-white to-slate-50 py-12 px-4 sm:px-6 lg:px-8 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50/80 px-3 py-1 text-xs font-semibold text-sky-800 shadow-sm dark:border-sky-800 dark:bg-sky-950/50 dark:text-sky-300 mb-4">
-            <Info className="h-3.5 w-3.5" />
-            Ücretsiz, Açık Veri Odaklı ve Salt Okunur Şehir Rehberi
-          </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl dark:text-white">
-            İzmir&apos;in Tarihini ve Kültürünü <br className="hidden sm:inline" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-indigo-600">
-              Açık Veriyle Keşfedin
-            </span>
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg dark:text-slate-300">
-            Belediye açık veri portallarından derlenen müzeler, antik kentler, tarihi kalıntılar
-            ve kültür merkezlerini ilçe ve kategoriye göre kolayca filtreleyin.
-          </p>
-        </div>
-
-        {/* Filtre ve Arama Alanı */}
-        <div className="mx-auto mt-10 max-w-5xl rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-6 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-none">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-            {/* Metin Arama */}
-            <div className="relative md:col-span-5">
-              <label htmlFor="search" className="sr-only">Mekan Ara</label>
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                <Search className="h-4 w-4" />
-              </div>
-              <input
-                id="search"
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Mekan adı, açıklama veya adres ara..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder-slate-500"
-              />
-            </div>
-
-            {/* İlçe Filtresi */}
-            <div className="relative md:col-span-3">
-              <label htmlFor="district-select" className="sr-only">İlçe Seçin</label>
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                <MapPin className="h-4 w-4" />
-              </div>
-              <select
-                id="district-select"
-                value={selectedDistrict}
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/60 py-2.5 pl-10 pr-8 text-sm font-medium text-slate-800 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              >
-                <option value="all">Tüm İlçeler</option>
-                {districts
-                  .filter((d) => d !== 'all')
-                  .map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {/* Kategori Filtresi */}
-            <div className="relative md:col-span-3">
-              <label htmlFor="category-select" className="sr-only">Kategori Seçin</label>
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                <Building className="h-4 w-4" />
-              </div>
-              <select
-                id="category-select"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/60 py-2.5 pl-10 pr-8 text-sm font-medium text-slate-800 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              >
-                <option value="all">Tüm Kategoriler</option>
-                {categories
-                  .filter((c) => c !== 'all')
-                  .map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {/* Sıfırla Butonu */}
-            <div className="md:col-span-1 flex items-center">
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                disabled={!hasActiveFilters}
-                title="Filtreleri Temizle"
-                className={`flex h-10 w-full items-center justify-center rounded-xl border text-sm font-medium transition-all ${
-                  hasActiveFilters
-                    ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-red-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-red-400'
-                    : 'border-slate-200 bg-slate-100/50 text-slate-400 cursor-not-allowed dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-600'
-                }`}
-              >
-                <RotateCcw className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Aktif Filtre İstatistiği */}
-          <div className="mt-4 flex flex-wrap items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <div className="flex items-center gap-2">
-              <Filter className="h-3.5 w-3.5 text-slate-400" />
-              <span>
-                Bulunan mekan sayısı:{' '}
-                <strong className="text-slate-800 dark:text-white font-semibold">
-                  {filteredPlaces.length}
-                </strong>
-                {hasActiveFilters && (
-                  <span className="ml-1 text-slate-400">
-                    (Toplam {mockPlaces.length} mekandan filtrelendi)
-                  </span>
-                )}
-              </span>
-            </div>
-
-            {hasActiveFilters && (
-              <button
-                onClick={handleResetFilters}
-                className="text-xs text-sky-600 hover:text-sky-700 hover:underline dark:text-sky-400"
-              >
-                Tüm filtreleri kaldır
-              </button>
             )}
           </div>
-        </div>
-      </section>
-
-      {/* Mekanlar Listesi (Grid) */}
-      <main className="flex-1 mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 w-full">
-        {filteredPlaces.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-            {filteredPlaces.map((place) => (
-              <PlaceCard key={place.id} place={place} />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 py-16 px-4 text-center dark:border-slate-800">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400">
-              <Search className="h-7 w-7" />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-slate-900 dark:text-white">
-              Eşleşen mekan bulunamadı
-            </h3>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-md">
-              Arama kriterlerinize veya seçilen filtrelere uygun mekan kaydı bulunmuyor. Farklı bir ilçe ya da kategori deneyebilirsiniz.
-            </p>
-            <button
-              onClick={handleResetFilters}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 transition"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Filtreleri Sıfırla
-            </button>
-          </div>
-        )}
+        </section>
       </main>
 
-      {/* Alt Bilgi / Footer */}
-      <footer className="mt-auto border-t border-slate-200 bg-white py-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-        <div className="mx-auto max-w-7xl px-4">
-          <p className="font-medium text-slate-700 dark:text-slate-300">
-            Ülkemi Geziyorum — Açık Veri Kültür Rehberi
+      {/* Clean Modern Footer */}
+      <footer className="mt-auto border-t border-slate-200/80 bg-white py-12 text-center text-xs text-slate-500">
+        <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white">
+              <Compass className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-bold text-slate-900 text-sm">Ülkemi Geziyorum</span>
+            <span className="text-slate-400">— Açık Veri Kültür ve Mekan Rehberi</span>
+          </div>
+
+          <p className="text-slate-500">
+            Belediye açık veri portallarından derlenen ücretsiz kültür ve mekan rehberi.
           </p>
-          <p className="mt-1">
-            Veriler belediye açık veri portallarından periyodik olarak senkronize edilir. Haritasız, hızlı ve salt okunur mimari.
-          </p>
-          <p className="mt-2 text-[11px] text-slate-400">
-            Next.js 14+ (App Router) • TypeScript • Tailwind CSS • Supabase
+
+          <p className="text-slate-400">
+            © 2026 Ülkemi Geziyorum • Tüm hakları saklıdır
           </p>
         </div>
       </footer>
+
+      {/* City Detail Modal */}
+      <CityDetailModal
+        spot={selectedSpot}
+        onClose={() => setSelectedSpot(null)}
+        isSaved={selectedSpot ? savedSpots.includes(selectedSpot.id.toLowerCase()) : false}
+        onToggleSave={handleToggleSaveSpot}
+      />
+
+      {/* 81 Provinces Directory Modal */}
+      <ExploreProvincesModal
+        isOpen={isExploreModalOpen}
+        onClose={() => setIsExploreModalOpen(false)}
+        savedSpots={savedSpots}
+        onToggleSaveSpot={handleToggleSaveSpot}
+        onSelectCity={handleSelectCityByName}
+      />
+
+      {/* Personalized Route Planner Modal */}
+      <RoutePlannerModal
+        isOpen={isPlannerModalOpen}
+        onClose={() => setIsPlannerModalOpen(false)}
+        savedSpots={savedSpots}
+        onRemoveSpot={handleRemoveSpot}
+        onClearAll={handleClearAllSpots}
+      />
     </div>
   );
 }
